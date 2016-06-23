@@ -5,11 +5,6 @@ import six
 from django.db.models import signals
 from django.db.models.fields import Field, BigIntegerField
 from django.db.models.fields.subclassing import Creator
-try:
-    from django.db.models.fields.subclassing import SubfieldBase
-except ImportError:
-    # django 1.2
-    from django.db.models.fields.subclassing import LegacyConnection as SubfieldBase  # NOQA
 
 from bitfield.forms import BitFormField
 from bitfield.query import BitQueryLookupWrapper
@@ -77,14 +72,10 @@ class BitFieldCreator(Creator):
         return retval
 
 
-class BitFieldMeta(SubfieldBase):
+class BitFieldMeta(type):
     """
-    Modified SubFieldBase to use our contribute_to_class method (instead of
-    monkey-patching make_contrib).  This uses our BitFieldCreator descriptor
+    Meta class that uses our BitFieldCreator descriptor
     in place of the default.
-
-    NOTE: If we find ourselves needing custom descriptors for fields, we could
-    make this generic.
     """
     def __new__(cls, name, bases, attrs):
         def contribute_to_class(self, cls, name):
@@ -150,11 +141,6 @@ class BitField(six.with_metaclass(BitFieldMeta, BigIntegerField)):
         if isinstance(value, (BitHandler, Bit)):
             value = value.mask
         return int(value)
-
-    # def get_db_prep_save(self, value, connection):
-    #     if isinstance(value, Bit):
-    #         return BitQuerySaveWrapper(self.model._meta.db_table, self.name, value)
-    #     return super(BitField, self).get_db_prep_save(value, connection=connection)
 
     def get_db_prep_lookup(self, lookup_type, value, connection, prepared=False):
         if isinstance(getattr(value, 'expression', None), Bit):
