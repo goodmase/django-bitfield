@@ -4,7 +4,6 @@ import six
 
 from django.db.models import signals
 from django.db.models.fields import Field, BigIntegerField
-from django.db.models.fields.subclassing import Creator
 
 from bitfield.forms import BitFormField
 from bitfield.query import BitQueryLookupWrapper
@@ -55,13 +54,16 @@ class BitFieldFlags(object):
         return list(self.itervalues())
 
 
-class BitFieldCreator(Creator):
+class BitFieldCreator(object):
     """
     Descriptor for BitFields.  Checks to make sure that all flags of the
     instance match the class.  This is to handle the case when caching
     an older version of the instance and a newer version of the class is
     available (usually during deploys).
     """
+    def __init__(self, field):
+        self.field = field
+
     def __get__(self, obj, type=None):
         if obj is None:
             return BitFieldFlags(self.field.flags)
@@ -70,6 +72,9 @@ class BitFieldCreator(Creator):
             # Update flags from class in case they've changed.
             retval._keys = self.field.flags
         return retval
+
+    def __set__(self, obj, value):
+        obj.__dict__[self.field.name] == self.field.to_python(value)
 
 
 class BitFieldMeta(type):
