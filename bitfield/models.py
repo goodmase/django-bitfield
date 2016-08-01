@@ -54,15 +54,29 @@ class BitFieldFlags(object):
         return list(self.itervalues())
 
 
-class BitFieldCreator(object):
+class Creator(object):
+    """
+    A placeholder class that provides a way to set the attribute on the model.
+    """
+    def __init__(self, field):
+        self.field = field
+
+    def __get__(self, obj, type=None):
+        if obj is None:
+            return self
+        return obj.__dict__[self.field.name]
+
+    def __set__(self, obj, value):
+        obj.__dict__[self.field.name] = self.field.to_python(value)
+
+
+class BitFieldCreator(Creator):
     """
     Descriptor for BitFields.  Checks to make sure that all flags of the
     instance match the class.  This is to handle the case when caching
     an older version of the instance and a newer version of the class is
     available (usually during deploys).
     """
-    def __init__(self, field):
-        self.field = field
 
     def __get__(self, obj, type=None):
         if obj is None:
@@ -72,9 +86,6 @@ class BitFieldCreator(object):
             # Update flags from class in case they've changed.
             retval._keys = self.field.flags
         return retval
-
-    def __set__(self, obj, value):
-        obj.__dict__[self.field.name] == self.field.to_python(value)
 
 
 class BitFieldMeta(type):
